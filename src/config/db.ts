@@ -1,11 +1,15 @@
 import { Pool } from 'pg';
+import dotenv from 'dotenv';
+dotenv.config(); 
+
+console.log(process.env.PG_USER);
 
 const globalSmartGISConfig = {
-    host: process.env.PG_HOST || 'localhost',
-    port: Number(process.env.PG_PORT) || 5432,
-    database: process.env.PG_DATABASE || 'your-database',
-    user: process.env.PG_USER || 'your-username',
-    password: process.env.PG_PASSWORD || 'your-password',
+    user: process.env.PG_USER,
+    host: process.env.PG_HOST,
+    database: process.env.PG_DATABASE,
+    password: process.env.PG_PASSWORD,
+    port: Number(process.env.PG_PORT),
 };
 
 type GlobalConfig = typeof globalSmartGISConfig;
@@ -17,6 +21,7 @@ const queryPostgresDB = async (query: string, config: GlobalConfig) => {
         database: config.database,
         user: config.user,
         password: config.password,
+        ssl: { rejectUnauthorized: false },
     });
 
     try {
@@ -31,6 +36,7 @@ const queryPostgresDB = async (query: string, config: GlobalConfig) => {
         await pool.end();
     }
 };
+
 
 export { queryPostgresDB, globalSmartGISConfig };
 
