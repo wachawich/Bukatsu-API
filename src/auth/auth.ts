@@ -1,41 +1,90 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { Pool } from 'pg';
+import { queryPostgresDB, globalSmartGISConfig } from '../config/db';
 
-const users: { id: number; username: string; password: string }[] = [];
+const hashPasswordWithSalt = async (plainPassword: string) => {
+  const saltNumber = process.env.SALTNUMBER
+  const combined = plainPassword + saltNumber;
+  const hashed = await bcrypt.hash(combined, 10);
+  return hashed
+};
 
-export const registerUser = async (req: Request, res: Response): Promise<Response | void> => {
-    try {
-      const { username, password } = req.body;
-  
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password required" });
-      }
-  
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const user = { id: users.length + 1, username, password: hashedPassword };
-      users.push(user);
-  
-      return res.status(201).json({ message: "User registered successfully" });
-    } catch (error) {
-      console.error("Registration error:", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
-  };
-  
+// const users: { id: number; username: string; password: string }[] = [];
+
+export const registerUser = async (req: Request, res: Response) => {
+
+  const {
+    email,
+    user_first_name,
+    user_last_name,
+    password,
+    role_id,
+    org_id,
+    subject,
+    sex,
+    activity_type,
+  } = req.body;
+
+  const passwordHasing = await hashPasswordWithSalt(password)
+  const username = email.split('@')[0];
+
+  // เอา email ไปทำ OTP
+
+
+
+
+
+  // OTP section ถ้าผ่านทำต่อ ถ้าไม่ผ่าน return error
+
+  const query = `
+    INSERT INTO user_sys (username, email, user_first_name, user_last_name, password, sex, role_id, org_id)
+    VALUES ('${username}', '${email}', '${user_first_name}', '${user_last_name}', '${passwordHasing}', '${sex}' , ${role_id}, ${org_id})
+    RETURNING *;
+  `;
+
+  const userData = await queryPostgresDB(query, globalSmartGISConfig);
+  const userSysID = userData[0]['user_sys_id']
+
+  const subjectEntries = Object.values(subject); // [19, 23]
+  const subjectInsertValues = subjectEntries
+    .map(subject_id => `(${userSysID}, ${subject_id}, true)`)
+    .join(", ");
+
+  const subjectInsertQuery = `
+    INSERT INTO subject_interest_normalize (user_sys_id, subject_id, flag_valid)
+    VALUES ${subjectInsertValues};
+  `;
+
+  const subjectInData = await queryPostgresDB(subjectInsertQuery, globalSmartGISConfig);
+
+  const activityTypeEntries = Object.values(subject); // [19, 23]
+  const activityTypeInsertValues = activityTypeEntries
+    .map(subject_id => `(${userSysID}, ${subject_id}, true)`)
+    .join(", ");
+
+  const activityTypeInsertQuery = `
+    INSERT INTO subject_interest_normalize (user_sys_id, subject_id, flag_valid)
+    VALUES ${activityTypeInsertValues};
+  `;
+
+  const activityTypetInData = await queryPostgresDB(subjectInsertQuery, globalSmartGISConfig);
+
+
+  // console.log("req.body", req.body)
+  // console.log('passwordHasing', passwordHasing, username, query)
+  console.log("query", query, "\n\n\n", subjectInsertQuery, activityTypeInsertQuery)
+
+  res.status(200).json({ success: true, subjectInData, activityTypetInData, userData  });
+
+  // res.status(200).json({ success: true, query });
+
+};
+
+
 
 export const loginUser = async (req: Request, res: Response) => {
   const { username, password } = req.body;
-  const user = users.find((u) => u.username === username);
-
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(401).json({ message: "Invalid credentials" });
-  }
-
-  const token = jwt.sign({ id: user.id, username: user.username }, "SECRET_KEY", { expiresIn: "1h" });
-  res.json({ token });
 };
 
-export const getUsers = (req: Request, res: Response) => {
-  res.json(users.map((user) => ({ id: user.id, username: user.username })));
-};
