@@ -81,3 +81,96 @@ export const getActivity = async (req: Request, res: Response) => {
     }
 };
 
+
+
+export const createActivity = async (req: Request, res: Response) => {
+
+    const {
+        activity_id,
+        title,
+        description,
+        create_date,
+        start_date,
+        end_date,
+        status,
+        contact,
+        user_count,
+        price,
+        user_property,
+        remark,
+        create_by,
+        location_id,
+    } = req.body
+
+    if (
+        !activity_id &&
+        !title &&
+        !description &&
+        !create_date &&
+        !start_date &&
+        !end_date &&
+        !status &&
+        !contact &&
+        !user_count &&
+        !price &&
+        !user_property &&
+        !remark &&
+        !create_by &&
+        !location_id
+    ) {
+        throw new Error("No value input!");
+    }
+
+    if (!title || !create_by || !start_date || !end_date || !status || !location_id || !user_count) {
+        // throw new Error("No value input require feild!");
+        // return res.status(400).json({
+        //     success: false,
+        //     errors: [
+        //       { message: "Missing required fields" }
+        //     ]
+        //   });
+    }
+
+    const escape = (val: any) => val === null || val === undefined ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`;
+
+    const finalCreateDate = create_date || new Date().toISOString(); // 'YYYY-MM-DD'
+
+    let query = ``;
+
+    query += `
+    INSERT INTO activity (
+        title, description, create_date,
+        start_date, end_date, status, contact,
+        user_count, price, user_property, remark,
+        create_by, location_id
+    ) VALUES (
+        ${title ? `'${title}'` : 'NULL'},
+        ${description ? `'${description}'` : 'NULL'},
+        '${finalCreateDate}', 
+        ${start_date ? `'${start_date}'` : 'NULL'},
+        ${end_date ? `'${end_date}'` : 'NULL'},
+        ${status ? `'${status}'` : 'NULL'},
+        ${contact ? `'${contact}'` : 'NULL'},
+        ${user_count ?? 'NULL'},
+        ${price ?? 'NULL'},
+        ${user_property ? `'${user_property}'` : 'NULL'},
+        ${remark ? `'${remark}'` : 'NULL'},
+        ${create_by ? `${create_by}` : 'NULL'},
+        ${location_id ?? 'NULL'}
+    )
+    RETURNING *;
+    `;
+
+    console.log(query)
+
+
+    try {
+        const data = await queryPostgresDB(query, globalSmartGISConfig);
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        res.status(500).json({ success: false, message: 'Error fetching data' });
+    }
+};
+
+
