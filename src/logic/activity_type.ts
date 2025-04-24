@@ -6,6 +6,7 @@ export const getActivityType = async (req: Request, res: Response) => {
     const {
         activity_type_id,
         activity_type_name,
+        show,
     } = req.body
 
     let query = ``;
@@ -18,6 +19,9 @@ export const getActivityType = async (req: Request, res: Response) => {
     }
     if (activity_type_name) {
         query += `AND at.activity_type_name = ${activity_type_name}  \n`
+    }
+    if (show) {
+        query += `AND at.show = ${show}  \n`
     }
 
     console.log(query)
