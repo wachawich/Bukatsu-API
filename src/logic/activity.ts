@@ -14,7 +14,8 @@ export const getActivity = async (req: Request, res: Response) => {
         create_by,
         location_id,
         location_name,
-        location_type
+        location_type,
+        flag_valid,
     } = req.body
 
     if (
@@ -27,7 +28,8 @@ export const getActivity = async (req: Request, res: Response) => {
         !create_by &&
         !location_id &&
         !location_name &&
-        !location_type
+        !location_type &&
+        !flag_valid
     ) {
         throw new Error("No value input!");
     }
@@ -67,6 +69,9 @@ export const getActivity = async (req: Request, res: Response) => {
     }
     if (location_type) {
         query += `AND l.location_type = ${location_type}  \n`
+    }
+    if (flag_valid){
+        query += `AND a.flag_valid = ${flag_valid}`
     }
 
     console.log(query)
@@ -142,7 +147,7 @@ export const createActivity = async (req: Request, res: Response) => {
         title, description, create_date,
         start_date, end_date, status, contact,
         user_count, price, user_property, remark,
-        create_by, location_id
+        create_by, location_id, flag_valid
     ) VALUES (
         ${title ? `'${title}'` : 'NULL'},
         ${description ? `'${description}'` : 'NULL'},
@@ -156,7 +161,8 @@ export const createActivity = async (req: Request, res: Response) => {
         ${user_property ? `'${user_property}'` : 'NULL'},
         ${remark ? `'${remark}'` : 'NULL'},
         ${create_by ? `${create_by}` : 'NULL'},
-        ${location_id ?? 'NULL'}
+        ${location_id ?? 'NULL'},
+        true
     )
     RETURNING *;
     `;
