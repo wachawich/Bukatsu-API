@@ -65,11 +65,11 @@ export const registerUser = async (req: Request, res: Response) => {
     .join(", ");
 
   const activityTypeInsertQuery = `
-    INSERT INTO subject_interest_normalize (user_sys_id, subject_id, flag_valid)
+    INSERT INTO activity_interest_normalize (user_sys_id, activity_type_id, flag_valid)
     VALUES ${activityTypeInsertValues};
   `;
 
-  const activityTypetInData = await queryPostgresDB(subjectInsertQuery, globalSmartGISConfig);
+  const activityTypetInData = await queryPostgresDB(activityTypeInsertQuery, globalSmartGISConfig);
 
 
   // console.log("req.body", req.body)
@@ -89,5 +89,5 @@ export const loginUser = async (req: Request, res: Response) => {
 };
 
 export const resetPassword = async (req : Request , res: Response) => {
-  
+
 }

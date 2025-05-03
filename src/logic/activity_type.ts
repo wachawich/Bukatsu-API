@@ -46,7 +46,7 @@ export const createActivityType = async (req: Request, res: Response) => {
 
     const query = `
         INSERT INTO activity_type (activity_type_name, activity_type_description, show, flag_valid)
-        VALUES (${activity_type_name}, ${activity_type_description}, true, true)
+        VALUES ('${activity_type_name}', '${activity_type_description}', true, true)
         RETURNING *;
     `;
 

@@ -70,16 +70,63 @@ export const getActivity = async (req: Request, res: Response) => {
     if (location_type) {
         query += `AND l.location_type = ${location_type}  \n`
     }
-    if (flag_valid){
+    if (flag_valid) {
         query += `AND a.flag_valid = ${flag_valid}`
     }
 
     console.log(query)
 
+    const data = await queryPostgresDB(query, globalSmartGISConfig);
+    const activityID = data[0]['activity_id']
+
+    let queryAcNor = ``
+
+    queryAcNor += `
+        SELECT * FROM public.activity_type_normalize atn
+        LEFT JOIN activity_type at ON at.activity_type_id = atn.activity_type_id
+        WHERE atn.activity_id = ${activityID}
+    `
+
+    const acActypeNordata = await queryPostgresDB(queryAcNor, globalSmartGISConfig);
+
+    let querySubNor = ``
+
+    querySubNor += `
+        SELECT * FROM public.activity_subject_normalize asn
+        LEFT JOIN subject s ON s.subject_id = asn.subject_id
+        WHERE asn.activity_id = ${activityID}
+    `
+
+    const acSubNordata = await queryPostgresDB(querySubNor, globalSmartGISConfig);
+
+    // จัดกลุ่มข้อมูล normalize โดย activity_id
+    const acTypeGrouped : any = {};
+    for (const row of acActypeNordata) {
+        const id = row.activity_id;
+        if (!acTypeGrouped[id]) acTypeGrouped[id] = [];
+        acTypeGrouped[id].push(row);
+    }
+
+    const subTypeGrouped : any = {};
+    for (const row of acSubNordata) {
+        const id = row.activity_id;
+        if (!subTypeGrouped[id]) subTypeGrouped[id] = [];
+        subTypeGrouped[id].push(row);
+    }
+
+    // ใส่ข้อมูล normalize ลงในแต่ละ activity
+    const enrichedData = data.map(activity => {
+        const id = activity.activity_id;
+        return {
+            ...activity,
+            activity_type_data: acTypeGrouped[id] || [],
+            activity_subject_data: subTypeGrouped[id] || []
+        };
+    });
+
 
     try {
-        const data = await queryPostgresDB(query, globalSmartGISConfig);
-        res.status(200).json({ success: true, data });
+        res.status(200).json({ success: true, enrichedData });
     } catch (error) {
         console.error('Error fetching data:', error);
         res.status(500).json({ success: false, message: 'Error fetching data' });
@@ -91,7 +138,6 @@ export const getActivity = async (req: Request, res: Response) => {
 export const createActivity = async (req: Request, res: Response) => {
 
     const {
-        activity_id,
         title,
         description,
         create_date,
@@ -105,10 +151,11 @@ export const createActivity = async (req: Request, res: Response) => {
         remark,
         create_by,
         location_id,
+        activity_type,
+        subject,
     } = req.body
 
     if (
-        !activity_id &&
         !title &&
         !description &&
         !create_date &&
@@ -121,19 +168,15 @@ export const createActivity = async (req: Request, res: Response) => {
         !user_property &&
         !remark &&
         !create_by &&
-        !location_id
+        !location_id &&
+        !activity_type &&
+        !subject
     ) {
         throw new Error("No value input!");
     }
 
-    if (!title || !create_by || !start_date || !end_date || !status || !location_id || !user_count) {
-        // throw new Error("No value input require feild!");
-        // return res.status(400).json({
-        //     success: false,
-        //     errors: [
-        //       { message: "Missing required fields" }
-        //     ]
-        //   });
+    if (!title || !create_by || !start_date || !end_date || !status || !location_id || !user_count || !activity_type || !subject) {
+        throw new Error("No value input require feild!");
     }
 
     const escape = (val: any) => val === null || val === undefined ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`;
@@ -149,19 +192,19 @@ export const createActivity = async (req: Request, res: Response) => {
         user_count, price, user_property, remark,
         create_by, location_id, flag_valid
     ) VALUES (
-        ${title ? `'${title}'` : 'NULL'},
+        '${title}',
         ${description ? `'${description}'` : 'NULL'},
         '${finalCreateDate}', 
-        ${start_date ? `'${start_date}'` : 'NULL'},
-        ${end_date ? `'${end_date}'` : 'NULL'},
-        ${status ? `'${status}'` : 'NULL'},
+        '${start_date}',
+        '${end_date}',
+        '${status}',
         ${contact ? `'${contact}'` : 'NULL'},
-        ${user_count ?? 'NULL'},
+        '${user_count}',
         ${price ?? 'NULL'},
         ${user_property ? `'${user_property}'` : 'NULL'},
         ${remark ? `'${remark}'` : 'NULL'},
-        ${create_by ? `${create_by}` : 'NULL'},
-        ${location_id ?? 'NULL'},
+        ${create_by},
+        ${location_id},
         true
     )
     RETURNING *;
@@ -169,10 +212,40 @@ export const createActivity = async (req: Request, res: Response) => {
 
     console.log(query)
 
+    const activityData = await queryPostgresDB(query, globalSmartGISConfig);
+
+    const activityID = activityData[0]['activity_id']
+
+    const subjectEntries = Object.values(subject); // [19, 23]
+    const subjectInsertValues = subjectEntries
+        .map(subject_id => `(${activityID}, ${subject_id}, true)`)
+        .join(", ");
+
+    const subjectInsertQuery = `
+      INSERT INTO activity_subject_normalize (activity_id, subject_id, flag_valid)
+      VALUES ${subjectInsertValues}
+      RETURNING *;
+    `;
+
+    const activitySubjectData = await queryPostgresDB(subjectInsertQuery, globalSmartGISConfig);
+
+    const activityTypeEntries = Object.values(activity_type); // [19, 23]
+    const activityTypeInsertValues = activityTypeEntries
+        .map(activity_type_id => `(${activityID}, ${activity_type_id}, true)`)
+        .join(", ");
+
+    const activityTypeInsertQuery = `
+    INSERT INTO activity_type_normalize (activity_id, activity_type_id, flag_valid)
+    VALUES ${activityTypeInsertValues}
+    RETURNING *;
+  `;
+
+    const activityTypetInData = await queryPostgresDB(activityTypeInsertQuery, globalSmartGISConfig);
+
 
     try {
-        const data = await queryPostgresDB(query, globalSmartGISConfig);
-        res.status(200).json({ success: true, data });
+        // const data = await queryPostgresDB(query, globalSmartGISConfig);
+        res.status(200).json({ success: true, activityData, activitySubjectData, activityTypetInData });
     } catch (error) {
         console.error('Error fetching data:', error);
         res.status(500).json({ success: false, message: 'Error fetching data' });
