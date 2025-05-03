@@ -37,3 +37,26 @@ export const getActivityType = async (req: Request, res: Response) => {
 
 }
 
+export const createActivityType = async (req: Request, res: Response) => {
+    const {
+        activity_type_name,
+        activity_type_description,
+    } = req.body;
+
+
+    const query = `
+        INSERT INTO activity_type (activity_type_name, activity_type_description, show, flag_valid)
+        VALUES (${activity_type_name}, ${activity_type_description}, true, true)
+        RETURNING *;
+    `;
+
+    try {
+        const data = await queryPostgresDB(query, globalSmartGISConfig);
+        res.status(201).json({ success: true, data: data[0] });
+    } catch (error) {
+        console.error('Error creating activity type:', error);
+        res.status(500).json({ success: false, message: 'Error creating activity type' });
+    }
+};
+
+

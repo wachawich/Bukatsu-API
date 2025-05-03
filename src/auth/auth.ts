@@ -59,9 +59,9 @@ export const registerUser = async (req: Request, res: Response) => {
 
   const subjectInData = await queryPostgresDB(subjectInsertQuery, globalSmartGISConfig);
 
-  const activityTypeEntries = Object.values(subject); // [19, 23]
+  const activityTypeEntries = Object.values(activity_type); // [19, 23]
   const activityTypeInsertValues = activityTypeEntries
-    .map(subject_id => `(${userSysID}, ${subject_id}, true)`)
+    .map(activity_type_id => `(${userSysID}, ${activity_type_id}, true)`)
     .join(", ");
 
   const activityTypeInsertQuery = `
@@ -88,3 +88,6 @@ export const loginUser = async (req: Request, res: Response) => {
   const { username, password } = req.body;
 };
 
+export const resetPassword = async (req : Request , res: Response) => {
+  
+}

@@ -4,7 +4,7 @@ import { getUser } from "../logic/user"
 import { getOrg } from "../logic/org"
 import { getRole } from "../logic/role"
 import { getFav } from "../logic/favorite"
-import { getActivityType } from "../logic/activity_type"
+import { getActivityType, createActivityType } from "../logic/activity_type"
 import { getActivity, createActivity } from "../logic/activity"
 import { getLocation } from "../logic/location"
 import { getSubject } from "../logic/subject"
@@ -37,6 +37,7 @@ router.post("/create_activity.post", createActivity)
 
 // Activity Type
 router.post("/activity_type.get", getActivityType)
+router.post("/create_activity_type.post", createActivityType)
 
 
 // Subject
