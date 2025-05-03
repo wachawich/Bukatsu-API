@@ -3,7 +3,7 @@ import { registerUser, loginUser, resetPassword, changePassword } from "../auth/
 import { getUser, updateUser } from "../logic/user"
 import { getOrg } from "../logic/org"
 import { getRole } from "../logic/role"
-import { getFav } from "../logic/favorite"
+import { getFav, createFav, updateFav } from "../logic/favorite"
 import { getActivityType, createActivityType } from "../logic/activity_type"
 import { getActivity, createActivity } from "../logic/activity"
 import { getLocation } from "../logic/location"
@@ -34,6 +34,8 @@ router.post("/role.get", getRole)
 
 // Favorite
 router.post("/fav.get", getFav)
+router.post("/fav.create", createFav)
+router.post("/fav.update", updateFav)
 
 
 // Activity

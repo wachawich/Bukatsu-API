@@ -8,6 +8,9 @@ export const getFav = async (req: Request, res: Response) => {
         activity_id,
     } = req.body
 
+    if (!user_sys_id && !activity_id){
+        res.status(400).json({ success: false, message: 'No value Input' });
+    }
     // console.log(req.body)
 
     let query = ``;
@@ -34,4 +37,68 @@ export const getFav = async (req: Request, res: Response) => {
     }
 
 }
+
+
+export const createFav = async (req: Request, res: Response) => {
+    const {
+      user_sys_id,
+      activity_id,
+    } = req.body;
+  
+    if (!user_sys_id || !activity_id) {
+      res.status(400).json({ success: false, message: 'user_sys_id and activity_id are required' });
+    }
+  
+    const query = `
+      INSERT INTO favorite_normalize (user_sys_id, activity_id, flag_valid)
+      VALUES (${user_sys_id}, ${activity_id}, true)
+      RETURNING *;
+    `;
+  
+    console.log(query);
+  
+    try {
+      const data = await queryPostgresDB(query, globalSmartGISConfig);
+      res.status(201).json({ success: true, data });
+    } catch (error) {
+      console.error('Error inserting data:', error);
+      res.status(500).json({ success: false, message: 'Error inserting data' });
+    }
+  };
+
+
+  export const updateFav = async (req: Request, res: Response) => {
+    const {
+      user_sys_id,
+      activity_id,
+      flag_valid,
+    } = req.body;
+  
+    if (!user_sys_id || !activity_id || typeof flag_valid !== 'boolean') {
+      res.status(400).json({
+        success: false,
+        message: 'user_sys_id, activity_id, and flag_valid (boolean) are required',
+      });
+    }
+  
+    const query = `
+      UPDATE favorite_normalize
+      SET flag_valid = ${flag_valid}
+      WHERE user_sys_id = ${user_sys_id}
+      AND activity_id = ${activity_id}
+      RETURNING *;
+    `;
+  
+    console.log(query);
+  
+    try {
+      const data = await queryPostgresDB(query, globalSmartGISConfig);
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      console.error('Error updating data:', error);
+      res.status(500).json({ success: false, message: 'Error updating data' });
+    }
+  };
+  
+  
 
