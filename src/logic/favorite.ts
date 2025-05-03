@@ -6,9 +6,10 @@ export const getFav = async (req: Request, res: Response) => {
     const {
         user_sys_id,
         activity_id,
+        flag_valid,
     } = req.body
 
-    if (!user_sys_id && !activity_id){
+    if (!user_sys_id && !activity_id && !flag_valid){
         res.status(400).json({ success: false, message: 'No value Input' });
     }
     // console.log(req.body)
@@ -23,6 +24,9 @@ export const getFav = async (req: Request, res: Response) => {
     }
     if (activity_id) {
         query += `AND fn.activity_id = ${activity_id}  \n`
+    }
+    if (flag_valid) {
+        query += `AND fn.flag_valid = ${flag_valid} \n`
     }
 
     console.log(query)
