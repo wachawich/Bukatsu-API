@@ -26,7 +26,7 @@ export const getUser = async (req: Request, res: Response) => {
     !sex &&
     !phone &&
     !email){
-      throw new Error("No value input!");
+      res.status(400).json({ success: false, message: "No value input!" });
     }
 
   // console.log(req.body)
@@ -75,6 +75,62 @@ export const getUser = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching data:', error);
     res.status(500).json({ success: false, message: 'Error fetching data' });
+  }
+};
+
+
+export const updateUser = async (req: Request, res: Response) => {
+  const {
+    user_sys_id,
+    user_first_name,
+    user_last_name,
+    username,
+    sex,
+    phone,
+  } = req.body;
+
+  if (!user_sys_id) {
+    res.status(400).json({ success: false, message: "No user_sys_id data!" });
+  }
+
+  // Collect set clauses
+  const setClauses: string[] = [];
+
+  if (user_first_name) {
+    setClauses.push(`user_first_name = '${user_first_name}'`);
+  }
+  if (user_last_name) {
+    setClauses.push(`user_last_name = '${user_last_name}'`);
+  }
+  if (username) {
+    setClauses.push(`username = '${username}'`);
+  }
+  if (sex) {
+    setClauses.push(`sex = '${sex}'`);
+  }
+  if (phone) {
+    setClauses.push(`phone = '${phone}'`);
+  }
+
+  if (setClauses.length === 0) {
+    res.status(400).json({ success: false, message: "No fields provided for update!" });
+  }
+
+  const query = `
+    UPDATE user_sys
+    SET ${setClauses.join(", ")}
+    WHERE user_sys_id = ${user_sys_id}
+    RETURNING email;
+  `;
+
+  console.log(query);
+
+  try {
+    const data = await queryPostgresDB(query, globalSmartGISConfig);
+    res.status(200).json({ success: true, data, message: "updates users successfully!" });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({ success: false, message: "Error updating user" });
   }
 };
 

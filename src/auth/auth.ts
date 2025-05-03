@@ -11,6 +11,13 @@ const hashPasswordWithSalt = async (plainPassword: string) => {
   return hashed
 };
 
+const verifyPasswordWithSalt = async (plainPassword: string, hashedPassword: string) => {
+  const saltNumber = process.env.SALTNUMBER;
+  const combined = plainPassword + saltNumber;
+  const isMatch = await bcrypt.compare(combined, hashedPassword);
+  return isMatch;
+};
+
 // const users: { id: number; username: string; password: string }[] = [];
 
 export const registerUser = async (req: Request, res: Response) => {
@@ -47,6 +54,8 @@ export const registerUser = async (req: Request, res: Response) => {
   const userData = await queryPostgresDB(query, globalSmartGISConfig);
   const userSysID = userData[0]['user_sys_id']
 
+
+  // subject normalize
   const subjectEntries = Object.values(subject); // [19, 23]
   const subjectInsertValues = subjectEntries
     .map(subject_id => `(${userSysID}, ${subject_id}, true)`)
@@ -54,11 +63,14 @@ export const registerUser = async (req: Request, res: Response) => {
 
   const subjectInsertQuery = `
     INSERT INTO subject_interest_normalize (user_sys_id, subject_id, flag_valid)
-    VALUES ${subjectInsertValues};
+    VALUES ${subjectInsertValues}
+    RETURNING *;
   `;
 
   const subjectInData = await queryPostgresDB(subjectInsertQuery, globalSmartGISConfig);
 
+
+  // activity type normalize
   const activityTypeEntries = Object.values(activity_type); // [19, 23]
   const activityTypeInsertValues = activityTypeEntries
     .map(activity_type_id => `(${userSysID}, ${activity_type_id}, true)`)
@@ -66,28 +78,151 @@ export const registerUser = async (req: Request, res: Response) => {
 
   const activityTypeInsertQuery = `
     INSERT INTO activity_interest_normalize (user_sys_id, activity_type_id, flag_valid)
-    VALUES ${activityTypeInsertValues};
+    VALUES ${activityTypeInsertValues}
+    RETURNING *;
   `;
 
   const activityTypetInData = await queryPostgresDB(activityTypeInsertQuery, globalSmartGISConfig);
 
 
-  // console.log("req.body", req.body)
-  // console.log('passwordHasing', passwordHasing, username, query)
+  // return
   console.log("query", query, "\n\n\n", subjectInsertQuery, activityTypeInsertQuery)
-
-  res.status(200).json({ success: true, subjectInData, activityTypetInData, userData  });
-
-  // res.status(200).json({ success: true, query });
+  res.status(200).json({ success: true, subjectInData, activityTypetInData, userData });
 
 };
 
 
 
 export const loginUser = async (req: Request, res: Response) => {
-  const { username, password } = req.body;
+  try {
+    const { username, password } = req.body;
+    const JWT_SECRET : any = process.env.JWT_SECRET
+
+    // 1. Find user by username or email
+    const userQuery = `
+      SELECT u.*, r.*, o.* 
+      FROM user_sys u
+      LEFT JOIN role r ON u.role_id = r.role_id
+      LEFT JOIN org o ON u.org_id = o.org_id
+      WHERE u.username = '${username}' OR u.email = '${username}'
+      LIMIT 1
+    `;
+
+    const usersData = await queryPostgresDB(userQuery, globalSmartGISConfig);
+
+    if (usersData.length === 0) {
+      res.status(401).json({ success: false, message: "User not found" });
+    }
+
+    const user = usersData[0];
+
+    // 2. Verify password with salt
+    const isMatch = await verifyPasswordWithSalt(password , user.password)
+
+    if (!isMatch) {
+      res.status(401).json({ success: false, message: "Incorrect password" });
+    }
+
+    // 3. Exclude password from user object
+    const { password: _, ...userData } = user;
+
+    // 4. Generate JWT token
+    const token = jwt.sign(
+      {
+        ...userData, // ใช้ทั้งหมด ยกเว้น password
+      },
+      JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    // 5. Return token and user data
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: userData,
+    });
+
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
 };
 
-export const resetPassword = async (req : Request , res: Response) => {
 
-}
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      res.status(400).json({ success: false, message: "Email and new password are required" });
+    }
+
+    const passwordHasing = await hashPasswordWithSalt(password)
+
+    const query = `
+      UPDATE user_sys
+      SET password = '${passwordHasing}'
+      WHERE email = '${email}'
+      RETURNING email;
+    `;
+
+    const result = await queryPostgresDB(query, globalSmartGISConfig);
+
+    if (result.length === 0) {
+      res.status(404).json({ success: false, message: "Email not found" });
+    } else {
+      res.status(200).json({ success: true, message: "Password reset successfully" });
+    }
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const { user_sys_id, old_password, new_password } = req.body;
+
+    if (!user_sys_id || !old_password || !new_password) {
+      res.status(400).json({ success: false, message: "Email and new password are required" });
+    }
+
+    const query = `
+      SELECT * FROM user_sys
+      WHERE user_sys_id = ${user_sys_id}
+    `
+
+    const userData = await  queryPostgresDB(query, globalSmartGISConfig);
+    if (userData.length <= 0) {
+      res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const passwordUserData = userData[0]['password']
+
+    const isMatch = await verifyPasswordWithSalt(old_password , passwordUserData)
+
+    if (isMatch){
+      const passwordHasing = await hashPasswordWithSalt(new_password)
+
+      const updateQuery = `
+        UPDATE user_sys
+        SET password = '${passwordHasing}'
+        WHERE user_sys_id = '${user_sys_id}'
+        RETURNING user_sys_id;
+      `
+
+      const result = await queryPostgresDB(updateQuery, globalSmartGISConfig);
+
+      res.status(200).json({ success: true, message: `Update password successfully!` });
+    } else {
+      res.status(400).json({ success: true, message: `Your password does not match.!` });
+    }
+
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};

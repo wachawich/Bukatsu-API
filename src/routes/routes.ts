@@ -1,6 +1,6 @@
 import express from "express";
-import { registerUser, loginUser } from "../auth/auth";
-import { getUser } from "../logic/user"
+import { registerUser, loginUser, resetPassword, changePassword } from "../auth/auth";
+import { getUser, updateUser } from "../logic/user"
 import { getOrg } from "../logic/org"
 import { getRole } from "../logic/role"
 import { getFav } from "../logic/favorite"
@@ -9,13 +9,19 @@ import { getActivity, createActivity } from "../logic/activity"
 import { getLocation } from "../logic/location"
 import { getSubject } from "../logic/subject"
 
+// import { sendOTP, verifyOTP } from "../auth/otp";
+
 const router = express.Router();
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 
+router.post("/password.reset", resetPassword)
+router.post("/password.change", changePassword)
+
 // User Sys
 router.post("/users.get", getUser);
+router.post("/users.update", updateUser)
 
 
 // Org
@@ -47,5 +53,9 @@ router.post("/subject.get", getSubject)
 // Location
 router.post("/location.get", getLocation)
 
+
+//otp
+// router.post("/otp.send", sendOTP)
+// router.post("/otp.verify", verifyOTP)
 
 export default router;
