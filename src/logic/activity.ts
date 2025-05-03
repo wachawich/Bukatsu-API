@@ -126,7 +126,7 @@ export const getActivity = async (req: Request, res: Response) => {
 
 
     try {
-        res.status(200).json({ success: true, enrichedData });
+        res.status(200).json({ success: true, data : enrichedData });
     } catch (error) {
         console.error('Error fetching data:', error);
         res.status(500).json({ success: false, message: 'Error fetching data' });
