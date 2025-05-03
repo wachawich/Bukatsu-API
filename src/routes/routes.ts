@@ -6,7 +6,7 @@ import { getRole } from "../logic/role"
 import { getFav, createFav, updateFav } from "../logic/favorite"
 import { getActivityType, createActivityType } from "../logic/activity_type"
 import { getActivity, createActivity } from "../logic/activity"
-import { getLocation } from "../logic/location"
+import { getLocation, createLocation, updateLocation } from "../logic/location"
 import { getSubject } from "../logic/subject"
 
 // import { sendOTP, verifyOTP } from "../auth/otp";
@@ -54,6 +54,8 @@ router.post("/subject.get", getSubject)
 
 // Location
 router.post("/location.get", getLocation)
+router.post("/location.create", createLocation)
+router.post("/location.update", updateLocation)
 
 
 //otp
