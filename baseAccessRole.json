@@ -1,0 +1,7 @@
+{
+    "club" : {
+        "create" : false,
+        "update" : false,
+        "read" : false
+    }
+}

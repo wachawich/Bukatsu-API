@@ -2,12 +2,12 @@ import express from "express";
 import { registerUser, loginUser, resetPassword, changePassword } from "../auth/auth";
 import { getUser, updateUser } from "../logic/user"
 import { getOrg } from "../logic/org"
-import { getRole } from "../logic/role"
+import { getRole, createRole, updateRole } from "../logic/role"
 import { getFav, createFav, updateFav } from "../logic/favorite"
-import { getActivityType, createActivityType } from "../logic/activity_type"
+import { getActivityType, createActivityType, updateActivityType } from "../logic/activity_type"
 import { getActivity, createActivity } from "../logic/activity"
 import { getLocation, createLocation, updateLocation } from "../logic/location"
-import { getSubject } from "../logic/subject"
+import { getSubject, createSubject, updateSubject } from "../logic/subject"
 
 // import { sendOTP, verifyOTP } from "../auth/otp";
 
@@ -30,6 +30,8 @@ router.post("/org.get", getOrg)
 
 // Role
 router.post("/role.get", getRole)
+router.post("/role.create", createRole)
+router.post("/role.update", updateRole)
 
 
 // Favorite
@@ -45,11 +47,14 @@ router.post("/create_activity.post", createActivity)
 
 // Activity Type
 router.post("/activity_type.get", getActivityType)
-router.post("/create_activity_type.post", createActivityType)
+router.post("/activity_type.post", createActivityType)
+router.post("/activity_type.update", updateActivityType)
 
 
 // Subject
 router.post("/subject.get", getSubject)
+router.post("/subject.create", createSubject)
+router.post("/subject.update", updateSubject)
 
 
 // Location
