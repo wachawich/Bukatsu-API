@@ -20,76 +20,97 @@ const verifyPasswordWithSalt = async (plainPassword: string, hashedPassword: str
 
 // const users: { id: number; username: string; password: string }[] = [];
 
-export const registerUser = async (req: Request, res: Response) => {
-
-  const {
-    email,
-    user_first_name,
-    user_last_name,
-    password,
-    role_id,
-    org_id,
-    subject,
-    sex,
-    activity_type,
-  } = req.body;
-
-  const passwordHasing = await hashPasswordWithSalt(password)
-  const username = email.split('@')[0];
-
-  // เอา email ไปทำ OTP
-
-
-
-
-
-  // OTP section ถ้าผ่านทำต่อ ถ้าไม่ผ่าน return error
-
+const checkEmailAlreadyUse = async (email : string) => {
+  
   const query = `
-    INSERT INTO user_sys (username, email, user_first_name, user_last_name, password, sex, role_id, org_id)
-    VALUES ('${username}', '${email}', '${user_first_name}', '${user_last_name}', '${passwordHasing}', '${sex}' , ${role_id}, ${org_id})
-    RETURNING *;
-  `;
+    select * from user_sys
+    where email = '${email}'
+  `
 
   const userData = await queryPostgresDB(query, globalSmartGISConfig);
-  const userSysID = userData[0]['user_sys_id']
 
+  if (userData.length > 0) {
+    return true
+  } else {
+    return false
+  }
 
-  // subject normalize
-  const subjectEntries = Object.values(subject); // [19, 23]
-  const subjectInsertValues = subjectEntries
-    .map(subject_id => `(${userSysID}, ${subject_id}, true)`)
-    .join(", ");
+}
 
-  const subjectInsertQuery = `
-    INSERT INTO subject_interest_normalize (user_sys_id, subject_id, flag_valid)
-    VALUES ${subjectInsertValues}
-    RETURNING *;
-  `;
+export const registerUser = async (req: Request, res: Response) => {
+  try {
+    const {
+      email,
+      user_first_name,
+      user_last_name,
+      password,
+      role_id,
+      org_id,
+      subject,
+      sex,
+      activity_type,
+    } = req.body;
 
-  const subjectInData = await queryPostgresDB(subjectInsertQuery, globalSmartGISConfig);
+    const emailIsUse = await checkEmailAlreadyUse(email);
 
+    if (emailIsUse){
+      res.status(500).json({ success: false, message: "Email Already Used!" });
+      return
+    }
 
-  // activity type normalize
-  const activityTypeEntries = Object.values(activity_type); // [19, 23]
-  const activityTypeInsertValues = activityTypeEntries
-    .map(activity_type_id => `(${userSysID}, ${activity_type_id}, true)`)
-    .join(", ");
+    const passwordHasing = await hashPasswordWithSalt(password);
+    const username = email.split('@')[0];
 
-  const activityTypeInsertQuery = `
-    INSERT INTO activity_interest_normalize (user_sys_id, activity_type_id, flag_valid)
-    VALUES ${activityTypeInsertValues}
-    RETURNING *;
-  `;
+    const query = `
+      INSERT INTO user_sys (username, email, user_first_name, user_last_name, password, sex, role_id)
+      VALUES ('${username}', '${email}', '${user_first_name}', '${user_last_name}', '${passwordHasing}', '${sex}', ${role_id})
+      RETURNING *;
+    `;
 
-  const activityTypetInData = await queryPostgresDB(activityTypeInsertQuery, globalSmartGISConfig);
+    const userData = await queryPostgresDB(query, globalSmartGISConfig);
+    const userSysID = userData[0]?.user_sys_id;
 
+    if (!userSysID) {
+      throw new Error("Failed to create user.");
+    }
 
-  // return
-  console.log("query", query, "\n\n\n", subjectInsertQuery, activityTypeInsertQuery)
-  res.status(200).json({ success: true, subjectInData, activityTypetInData, userData });
+    // Subject normalize
+    const subjectEntries = Object.values(subject); // [19, 23]
+    const subjectInsertValues = subjectEntries
+      .map(subject_id => `(${userSysID}, ${subject_id}, true)`)
+      .join(", ");
 
+    const subjectInsertQuery = `
+      INSERT INTO subject_interest_normalize (user_sys_id, subject_id, flag_valid)
+      VALUES ${subjectInsertValues}
+      RETURNING *;
+    `;
+
+    await queryPostgresDB(subjectInsertQuery, globalSmartGISConfig);
+
+    // Activity type normalize
+    const activityTypeEntries = Object.values(activity_type); // [19, 23]
+    const activityTypeInsertValues = activityTypeEntries
+      .map(activity_type_id => `(${userSysID}, ${activity_type_id}, true)`)
+      .join(", ");
+
+    const activityTypeInsertQuery = `
+      INSERT INTO activity_interest_normalize (user_sys_id, activity_type_id, flag_valid)
+      VALUES ${activityTypeInsertValues}
+      RETURNING *;
+    `;
+
+    await queryPostgresDB(activityTypeInsertQuery, globalSmartGISConfig);
+
+    // Success
+    console.log("query", query, "\n\n\n", subjectInsertQuery, activityTypeInsertQuery);
+    res.status(200).json({ success: true, message: "Register Successfully!" });
+
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: "Register failed", error: error.message });
+  }
 };
+
 
 
 
@@ -140,11 +161,10 @@ export const loginUser = async (req: Request, res: Response) => {
       success: true,
       message: "Login successful",
       token,
-      user: userData,
+      user: userData.email,
     });
 
   } catch (err) {
-    console.error("Login error:", err);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

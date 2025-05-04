@@ -7,6 +7,7 @@ export const getSubject = async (req: Request, res: Response) => {
         subject_id,
         subject_name,
         show,
+        flag_valid,
     } = req.body
 
     // console.log(req.body)
@@ -24,6 +25,9 @@ export const getSubject = async (req: Request, res: Response) => {
     }
     if (show) {
         query += `AND s.show = ${show}  \n`
+    }
+    if (flag_valid) {
+        query += `AND s.flag_valid = ${flag_valid}  \n`
     }
 
     console.log(query)
