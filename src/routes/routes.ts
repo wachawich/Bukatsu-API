@@ -5,7 +5,7 @@ import { getOrg } from "../logic/org"
 import { getRole, createRole, updateRole } from "../logic/role"
 import { getFav, createFav, updateFav } from "../logic/favorite"
 import { getActivityType, createActivityType, updateActivityType } from "../logic/activity_type"
-import { getActivity, createActivity } from "../logic/activity"
+import { getActivity, createActivity, getMyActivity } from "../logic/activity"
 import { getLocation, createLocation, updateLocation } from "../logic/location"
 import { getSubject, createSubject, updateSubject } from "../logic/subject"
 
@@ -43,7 +43,7 @@ router.post("/fav.update", updateFav)
 // Activity
 router.post("/activity.get", getActivity)
 router.post("/create_activity.post", createActivity)
-
+router.post("/my_activity.get", getMyActivity)
 
 // Activity Type
 router.post("/activity_type.get", getActivityType)
