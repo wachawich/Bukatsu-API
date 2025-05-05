@@ -85,9 +85,10 @@ export const updateRole = async (req: Request, res: Response) => {
     if (role_name) {
         updates.push(`role_name = '${role_name}'`);
     }
-    if (access){
-        updates.push(`access = ${access}`);
+    if (access) {
+        updates.push(`access = '${JSON.stringify(access)}'::jsonb`);
     }
+    
     if (typeof show === 'boolean') updates.push(`show = ${show}`);
     if (typeof flag_valid === 'boolean') updates.push(`flag_valid = ${flag_valid}`);
 
@@ -102,6 +103,8 @@ export const updateRole = async (req: Request, res: Response) => {
         WHERE role_id = ${role_id}
         RETURNING *;
     `;
+
+    console.log("query", query)
 
     try {
         const data = await queryPostgresDB(query, globalSmartGISConfig);

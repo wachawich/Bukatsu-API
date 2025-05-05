@@ -1,4 +1,24 @@
 {
+    "activity" : {
+        "create" : false,
+        "update" : false,
+        "read" : false
+    },
+    "calendar" : {
+        "create" : false,
+        "update" : false,
+        "read" : false
+    },
+    "my_activity" : {
+        "create" : false,
+        "update" : false,
+        "read" : false
+    },
+    "favorite" : {
+        "create" : true,
+        "update" : true,
+        "read" : true
+    },
     "club" : {
         "create" : false,
         "update" : false,
