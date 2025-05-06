@@ -153,6 +153,7 @@ export const createActivity = async (req: Request, res: Response) => {
         location_id,
         activity_type,
         subject,
+        image_link,
     } = req.body
 
     if (
@@ -170,7 +171,8 @@ export const createActivity = async (req: Request, res: Response) => {
         !create_by &&
         !location_id &&
         !activity_type &&
-        !subject
+        !subject &&
+        !image_link
     ) {
         throw new Error("No value input!");
     }
@@ -190,7 +192,7 @@ export const createActivity = async (req: Request, res: Response) => {
         title, description, create_date,
         start_date, end_date, status, contact,
         user_count, price, user_property, remark,
-        create_by, location_id, flag_valid
+        create_by, location_id, flag_valid, image_link
     ) VALUES (
         '${title}',
         ${description ? `'${description}'` : 'NULL'},
@@ -205,7 +207,8 @@ export const createActivity = async (req: Request, res: Response) => {
         ${remark ? `'${remark}'` : 'NULL'},
         ${create_by},
         ${location_id},
-        true
+        true,
+        '${image_link}'::jsonb
     )
     RETURNING *;
     `;
