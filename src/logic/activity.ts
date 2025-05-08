@@ -31,7 +31,9 @@ export const getActivity = async (req: Request, res: Response) => {
         !location_type &&
         !flag_valid
     ) {
-        throw new Error("No value input!");
+        // throw new Error("No value input!");
+        res.status(404).json({ success: false, message: 'No value input!' });
+        return
     }
 
     let query = ``;
@@ -134,7 +136,6 @@ export const getActivity = async (req: Request, res: Response) => {
 };
 
 
-
 export const createActivity = async (req: Request, res: Response) => {
 
     const {
@@ -153,7 +154,9 @@ export const createActivity = async (req: Request, res: Response) => {
         location_id,
         activity_type,
         subject,
-    } = req.body
+        activity_json_form, 
+        image_link,
+    } = req.body;
 
     if (
         !title &&
@@ -170,27 +173,44 @@ export const createActivity = async (req: Request, res: Response) => {
         !create_by &&
         !location_id &&
         !activity_type &&
-        !subject
+        !subject &&
+        !activity_json_form &&
+        !image_link
     ) {
-        throw new Error("No value input!");
+        //throw new Error("No value input!");
+        res.status(404).json({ success: false, message: 'No value input!' });
+        return
     }
 
     if (!title || !create_by || !start_date || !end_date || !status || !location_id || !user_count || !activity_type || !subject) {
-        throw new Error("No value input require feild!");
+        //throw new Error("No value input require feild!");
+        res.status(404).json({ success: false, message: 'No value input require feild!' });
+        return
     }
 
-    const escape = (val: any) => val === null || val === undefined ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`;
+    const escape = (val: any) =>
+        val === null || val === undefined
+            ? 'NULL'
+            : `'${String(val).replace(/'/g, "''")}'`;
 
-    const finalCreateDate = create_date || new Date().toISOString(); // 'YYYY-MM-DD'
+    const finalCreateDate = create_date || new Date().toISOString();
 
-    let query = ``;
+    const activityJsonEscaped = activity_json_form
+        ? `'${JSON.stringify(activity_json_form).replace(/'/g, "''")}'`
+        : 'NULL';
 
-    query += `
+    const iamgeLinkJsonEscaped = image_link
+        ? `'${JSON.stringify(image_link).replace(/'/g, "''")}'`
+        : 'NULL';
+
+    const query = `
     INSERT INTO activity (
         title, description, create_date,
         start_date, end_date, status, contact,
         user_count, price, user_property, remark,
-        create_by, location_id, flag_valid
+        create_by, location_id, flag_valid,
+        image_link,
+        activity_json_form
     ) VALUES (
         '${title}',
         ${description ? `'${description}'` : 'NULL'},
@@ -205,50 +225,151 @@ export const createActivity = async (req: Request, res: Response) => {
         ${remark ? `'${remark}'` : 'NULL'},
         ${create_by},
         ${location_id},
-        true
+        true,
+        ${iamgeLinkJsonEscaped}::jsonb
+        ${activityJsonEscaped}::jsonb
     )
     RETURNING *;
     `;
 
-    console.log(query)
-
-    const activityData = await queryPostgresDB(query, globalSmartGISConfig);
-
-    const activityID = activityData[0]['activity_id']
-
-    const subjectEntries = Object.values(subject); // [19, 23]
-    const subjectInsertValues = subjectEntries
-        .map(subject_id => `(${activityID}, ${subject_id}, true)`)
-        .join(", ");
-
-    const subjectInsertQuery = `
-      INSERT INTO activity_subject_normalize (activity_id, subject_id, flag_valid)
-      VALUES ${subjectInsertValues}
-      RETURNING *;
-    `;
-
-    const activitySubjectData = await queryPostgresDB(subjectInsertQuery, globalSmartGISConfig);
-
-    const activityTypeEntries = Object.values(activity_type); // [19, 23]
-    const activityTypeInsertValues = activityTypeEntries
-        .map(activity_type_id => `(${activityID}, ${activity_type_id}, true)`)
-        .join(", ");
-
-    const activityTypeInsertQuery = `
-    INSERT INTO activity_type_normalize (activity_id, activity_type_id, flag_valid)
-    VALUES ${activityTypeInsertValues}
-    RETURNING *;
-  `;
-
-    const activityTypetInData = await queryPostgresDB(activityTypeInsertQuery, globalSmartGISConfig);
-
-
     try {
-        // const data = await queryPostgresDB(query, globalSmartGISConfig);
+        const activityData = await queryPostgresDB(query, globalSmartGISConfig);
+        const activityID = activityData[0]['activity_id'];
+
+        const subjectEntries = Object.values(subject);
+        const subjectInsertValues = subjectEntries
+            .map(subject_id => `(${activityID}, ${subject_id}, true)`)
+            .join(", ");
+
+        const subjectInsertQuery = `
+          INSERT INTO activity_subject_normalize (activity_id, subject_id, flag_valid)
+          VALUES ${subjectInsertValues}
+          RETURNING *;
+        `;
+
+        const activitySubjectData = await queryPostgresDB(subjectInsertQuery, globalSmartGISConfig);
+
+        const activityTypeEntries = Object.values(activity_type);
+        const activityTypeInsertValues = activityTypeEntries
+            .map(activity_type_id => `(${activityID}, ${activity_type_id}, true)`)
+            .join(", ");
+
+        const activityTypeInsertQuery = `
+        INSERT INTO activity_type_normalize (activity_id, activity_type_id, flag_valid)
+        VALUES ${activityTypeInsertValues}
+        RETURNING *;
+      `;
+
+        const activityTypetInData = await queryPostgresDB(activityTypeInsertQuery, globalSmartGISConfig);
+
         res.status(200).json({ success: true, activityData, activitySubjectData, activityTypetInData });
+
     } catch (error) {
         console.error('Error fetching data:', error);
         res.status(500).json({ success: false, message: 'Error fetching data' });
+    }
+};
+
+
+export const updateActivity = async (req: Request, res: Response) => {
+    const {
+        activity_id,
+        title,
+        description,
+        start_date,
+        end_date,
+        status,
+        contact,
+        user_count,
+        price,
+        user_property,
+        remark,
+        location_id,
+        activity_type,
+        subject,
+        activity_json_form,
+        image_link,
+    } = req.body;
+
+    if (!activity_id) {
+        res.status(400).json({ success: false, message: 'Missing activity_id' });
+        return
+    }
+
+    const updates = [];
+    const escape = (val: any) =>
+        val === null || val === undefined ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`;
+
+    if (title) updates.push(`title = ${escape(title)}`);
+    if (description) updates.push(`description = ${escape(description)}`);
+    if (start_date) updates.push(`start_date = ${escape(start_date)}`);
+    if (end_date) updates.push(`end_date = ${escape(end_date)}`);
+    if (status) updates.push(`status = ${escape(status)}`);
+    if (contact) updates.push(`contact = ${escape(contact)}`);
+    if (user_count) updates.push(`user_count = ${user_count}`);
+    if (price !== undefined) updates.push(`price = ${price}`);
+    if (user_property) updates.push(`user_property = ${escape(user_property)}`);
+    if (remark) updates.push(`remark = ${escape(remark)}`);
+    if (location_id) updates.push(`location_id = ${location_id}`);
+    if (activity_json_form) updates.push(`activity_json_form = '${JSON.stringify(activity_json_form).replace(/'/g, "''")}'::jsonb`);
+    if (image_link) updates.push(`image_link = '${JSON.stringify(image_link).replace(/'/g, "''")}'::jsonb`);
+
+    if (updates.length === 0) {
+        res.status(400).json({ success: false, message: 'No data to update' });
+        return
+    }
+
+    const query = `
+        UPDATE activity SET ${updates.join(', ')}
+        WHERE activity_id = ${activity_id}
+        RETURNING *;
+    `;
+
+    try {
+        const updatedActivity = await queryPostgresDB(query, globalSmartGISConfig);
+
+        // Optional: Update normalize tables
+        if (subject) {
+            await queryPostgresDB(`DELETE FROM activity_subject_normalize WHERE activity_id = ${activity_id}`, globalSmartGISConfig);
+            const subjectValues = Object.values(subject).map(sid => `(${activity_id}, ${sid}, true)`).join(', ');
+            await queryPostgresDB(`INSERT INTO activity_subject_normalize (activity_id, subject_id, flag_valid) VALUES ${subjectValues}`, globalSmartGISConfig);
+        }
+
+        if (activity_type) {
+            await queryPostgresDB(`DELETE FROM activity_type_normalize WHERE activity_id = ${activity_id}`, globalSmartGISConfig);
+            const typeValues = Object.values(activity_type).map(tid => `(${activity_id}, ${tid}, true)`).join(', ');
+            await queryPostgresDB(`INSERT INTO activity_type_normalize (activity_id, activity_type_id, flag_valid) VALUES ${typeValues}`, globalSmartGISConfig);
+        }
+
+        res.status(200).json({ success: true, updatedActivity });
+    } catch (error) {
+        console.error('Error updating activity:', error);
+        res.status(500).json({ success: false, message: 'Error updating activity' });
+    }
+};
+
+
+export const deleteActivity = async (req: Request, res: Response) => {
+    const { activity_id } = req.params;
+
+    if (!activity_id) {
+        res.status(400).json({ success: false, message: 'Missing activity_id' });
+        return 
+    }
+
+    const query = `
+        UPDATE activity
+        SET flag_valid = false
+        WHERE activity_id = ${activity_id}
+        RETURNING *;
+    `;
+
+    try {
+        const deletedActivity = await queryPostgresDB(query, globalSmartGISConfig);
+        res.status(200).json({ success: true, deletedActivity });
+    } catch (error) {
+        console.error('Error deleting activity:', error);
+        res.status(500).json({ success: false, message: 'Error deleting activity' });
     }
 };
 
@@ -282,7 +403,8 @@ export const getMyActivity = async (req: Request, res: Response) => {
         !location_type &&
         !flag_valid
     ) {
-        throw new Error("No value input!");
+        res.status(404).json({ success: false, message: 'No value input!' });
+        // throw new Error("No value input!");
     }
 
     let query = ``;
@@ -337,3 +459,93 @@ export const getMyActivity = async (req: Request, res: Response) => {
         res.status(500).json({ success: false, message: 'Error fetching data' });
     }
 };
+
+export const joinActivity = async (req: Request, res: Response) => {
+    const {
+        user_sys_id,
+        activity_id,
+        approve = false,
+        flag_valid = true,
+        activity_json_form_user
+    } = req.body;
+
+    if (!user_sys_id || !activity_id) {
+        res.status(400).json({ success: false, message: 'Missing user_sys_id or activity_id' });
+        return
+    }
+
+    const escape = (val: any) =>
+        val === null || val === undefined ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`;
+
+    const activityFormJson = activity_json_form_user
+        ? `'${JSON.stringify(activity_json_form_user).replace(/'/g, "''")}'::jsonb`
+        : 'NULL';
+
+    const query = `
+        INSERT INTO attendance (
+            user_sys_id,
+            activity_id,
+            approve,
+            flag_valid,
+            activity_json_form_user
+        )
+        VALUES (
+            ${user_sys_id},
+            ${activity_id},
+            ${approve},
+            ${flag_valid},
+            ${activityFormJson}
+        )
+        RETURNING *;
+    `;
+
+    console.log("query", query)
+    
+    try {
+        const data = await queryPostgresDB(query, globalSmartGISConfig);
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error('Error joining activity:', error);
+        res.status(500).json({ success: false, message: 'Error joining activity' });
+    }
+};
+
+export const approveActivity = async (req: Request, res: Response) => {
+    const {
+        user_sys_id,
+        activity_id,
+        approve = true,
+        flag_valid = true
+    } = req.body;
+
+    if (!user_sys_id || !activity_id) {
+        res.status(400).json({ success: false, message: 'Missing user_sys_id or activity_id' });
+        return;
+    }
+
+
+    const query = `
+        UPDATE attendance
+        SET
+            approve = ${approve},
+            flag_valid = ${flag_valid} \n
+        \nWHERE user_sys_id = ${user_sys_id} AND activity_id = ${activity_id}
+        RETURNING *;
+    `;
+
+    console.log("query", query)
+
+    try {
+        const data = await queryPostgresDB(query, globalSmartGISConfig);
+        if (data.length === 0) {
+            res.status(404).json({ success: false, message: 'No matching attendance record found.' });
+        } else {
+            res.status(200).json({ success: true, data });
+        }
+    } catch (error) {
+        console.error('Error updating attendance:', error);
+        res.status(500).json({ success: false, message: 'Error updating attendance' });
+    }
+};
+
+
