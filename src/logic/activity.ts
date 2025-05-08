@@ -388,6 +388,7 @@ export const getMyActivity = async (req: Request, res: Response) => {
         location_name,
         location_type,
         flag_valid,
+        user_sys_id,
     } = req.body
 
     if (
@@ -401,7 +402,8 @@ export const getMyActivity = async (req: Request, res: Response) => {
         !location_id &&
         !location_name &&
         !location_type &&
-        !flag_valid
+        !flag_valid &&
+        !user_sys_id
     ) {
         res.status(404).json({ success: false, message: 'No value input!' });
         // throw new Error("No value input!");
@@ -446,6 +448,9 @@ export const getMyActivity = async (req: Request, res: Response) => {
     }
     if (flag_valid) {
         query += `AND a.flag_valid = ${flag_valid}  \n`
+    }
+    if (user_sys_id){
+        query += `AND atd.user_sys_id = ${user_sys_id}`
     }
 
     console.log(query)
