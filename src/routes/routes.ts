@@ -8,8 +8,9 @@ import { getActivityType, createActivityType, updateActivityType } from "../logi
 import { getActivity, createActivity } from "../logic/activity"
 import { getLocation, createLocation, updateLocation } from "../logic/location"
 import { getSubject, createSubject, updateSubject } from "../logic/subject"
-import { getClub } from "../logic/club";
+import { getClub, uploadimageclub, createClub, updateClub } from "../logic/club";
 import { uploadMedia } from '../logic/image';
+import {getImageClub} from '../logic/clubimage'
 import multer from 'multer';
 
 
@@ -67,11 +68,19 @@ router.post("/location.create", createLocation)
 router.post("/location.update", updateLocation)
 
 // club
-router.post("/club.get", getClub)
-
-//image
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+router.post("/club.get", getClub)
+router.post("/club.create", createClub)
+router.post("/club.update", updateClub)
+
+router.put("/club.put", upload.single('file'),uploadimageclub)
+console.log(storage)
+
+//club image
+router.post("/clublink.get", getImageClub)
+// router.post("/clublink.delete", deleteImageClub)
+//image
 router.put('/image.upload', upload.single('file'), uploadMedia);
 
 //otp
