@@ -133,6 +133,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
     if (usersData.length === 0) {
       res.status(401).json({ success: false, message: "User not found" });
+      return
     }
 
     const user = usersData[0];
@@ -142,6 +143,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
     if (!isMatch) {
       res.status(401).json({ success: false, message: "Incorrect password" });
+      return
     }
 
     // 3. Exclude password from user object
@@ -177,6 +179,7 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     if (!email || !password) {
       res.status(400).json({ success: false, message: "Email and new password are required" });
+      return
     }
 
     const passwordHasing = await hashPasswordWithSalt(password)
@@ -192,11 +195,12 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     if (result.length === 0) {
       res.status(404).json({ success: false, message: "Email not found" });
+      return
     } else {
       res.status(200).json({ success: true, message: "Password reset successfully" });
     }
   } catch (error) {
-    console.error("Reset password error:", error);
+    // console.error("Reset password error:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
@@ -208,6 +212,7 @@ export const changePassword = async (req: Request, res: Response) => {
 
     if (!user_sys_id || !old_password || !new_password) {
       res.status(400).json({ success: false, message: "Email and new password are required" });
+      return
     }
 
     const query = `
@@ -218,6 +223,7 @@ export const changePassword = async (req: Request, res: Response) => {
     const userData = await  queryPostgresDB(query, globalSmartGISConfig);
     if (userData.length <= 0) {
       res.status(404).json({ success: false, message: "User not found" });
+      return
     }
 
     const passwordUserData = userData[0]['password']
@@ -239,6 +245,7 @@ export const changePassword = async (req: Request, res: Response) => {
       res.status(200).json({ success: true, message: `Update password successfully!` });
     } else {
       res.status(400).json({ success: true, message: `Your password does not match.!` });
+      return
     }
 
   } catch (error) {
