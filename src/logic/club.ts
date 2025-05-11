@@ -113,6 +113,72 @@ export const uploadimageclub = async (req: express.Request, res: express.Respons
   }
 };
 
+export const uploadPRImagesClub = async (req: express.Request, res: express.Response) => {
+  const files: any = req.files;
+  const clubId: string = req.body.id;
+
+  if (!clubId || !files || (!files.square && !files.banner)) {
+    res.status(400).json({ error: 'Missing club ID or files' });
+  }
+
+  const uploadedUrls: { square?: string; banner?: string } = {};
+
+  try {
+    // อัปโหลดแต่ละไฟล์ที่มี
+    for (const type of ['square', 'banner']) {
+      const file = files[type]?.[0];
+      if (file) {
+        const fileExtension = file.originalname.split('.').pop();
+        const blobName = `${uuidv4()}.${fileExtension}`;
+        const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+        const options = {
+          blobHTTPHeaders: {
+            blobContentType: file.mimetype,
+          },
+        };
+
+        await blockBlobClient.uploadData(file.buffer, options);
+        uploadedUrls[type as 'square' | 'banner'] = blockBlobClient.url;
+      }
+    }
+
+    // ดึง club_image_path เดิม
+    const selectQuery = `SELECT club_image_path FROM club WHERE club_id = '${clubId}'`;
+    const result = await queryPostgresDB(selectQuery, globalSmartGISConfig);
+    let imagePathJson = { square: '', banner: '' };
+    
+    if (result.length > 0 && result[0].club_image_path) {
+      const existingPath = result[0].club_image_path;
+      imagePathJson = typeof existingPath === 'string' ? JSON.parse(existingPath) : existingPath;
+    }
+
+    // รวมข้อมูลใหม่
+    const updatedPath = {
+      ...imagePathJson,
+      ...uploadedUrls,
+    };
+
+    const updateQuery = `
+      UPDATE club
+      SET club_image_path = '${JSON.stringify(updatedPath)}'
+      WHERE club_id = '${clubId}'
+      RETURNING *;
+    `;
+    const updated = await queryPostgresDB(updateQuery, globalSmartGISConfig);
+
+    res.status(200).json({
+      message: 'Images uploaded successfully',
+      fileUrls: uploadedUrls,
+      updatedData: updated,
+    });
+    console.log(uploadedUrls)
+  } catch (error) {
+    console.error('Upload PR images error:', error);
+    res.status(500).json({ error: 'Failed to upload images' });
+  }
+};
+
 
 export const createClub = async (req: Request, res: Response) => {
     const {
