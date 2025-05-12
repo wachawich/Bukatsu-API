@@ -32,6 +32,7 @@ export const sendOTP = async (req: Request, res: Response) => {
       const otpData = await OTPFunction(email, otp);
       console.log("otp", otp);
       res.status(200).json({ success: true, message: "OTP sent to email" });
+      return
     } catch (err) {
       console.error(err);
       res.status(500).json({ success: false, message: "Failed to send OTP" });
@@ -45,12 +46,15 @@ export const verifyOTP = async (req: Request, res: Response) => {
 
     if (!record) {
         res.status(400).json({ success: false, message: "No OTP sent to this email" });
+        return
     }
     else if (Date.now() > record.expiresAt) {
         res.status(400).json({ success: false, message: "OTP expired" });
+        return
     }
     else if (otp !== record.otp) {
         res.status(400).json({ success: false, message: "Invalid OTP" });
+        return
     }
     else {
         delete otpStore[email];
