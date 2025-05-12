@@ -23,7 +23,7 @@ const verifyPasswordWithSalt = async (plainPassword: string, hashedPassword: str
 const checkEmailAlreadyUse = async (email : string) => {
   
   const query = `
-    select * from user_sys
+    select * from user_sys \n
     where email = '${email}'
   `
 
@@ -62,8 +62,8 @@ export const registerUser = async (req: Request, res: Response) => {
     const username = email.split('@')[0];
 
     const query = `
-      INSERT INTO user_sys (username, email, user_first_name, user_last_name, password, sex, role_id)
-      VALUES ('${username}', '${email}', '${user_first_name}', '${user_last_name}', '${passwordHasing}', '${sex}', ${role_id})
+      INSERT INTO user_sys (username, email, user_first_name, user_last_name, password, sex, role_id) \n
+      VALUES ('${username}', '${email}', '${user_first_name}', '${user_last_name}', '${passwordHasing}', '${sex}', ${role_id}) \n
       RETURNING *;
     `;
 
@@ -81,8 +81,8 @@ export const registerUser = async (req: Request, res: Response) => {
       .join(", ");
 
     const subjectInsertQuery = `
-      INSERT INTO subject_interest_normalize (user_sys_id, subject_id, flag_valid)
-      VALUES ${subjectInsertValues}
+      INSERT INTO subject_interest_normalize (user_sys_id, subject_id, flag_valid) \n
+      VALUES ${subjectInsertValues} \n
       RETURNING *;
     `;
 
@@ -95,8 +95,8 @@ export const registerUser = async (req: Request, res: Response) => {
       .join(", ");
 
     const activityTypeInsertQuery = `
-      INSERT INTO activity_interest_normalize (user_sys_id, activity_type_id, flag_valid)
-      VALUES ${activityTypeInsertValues}
+      INSERT INTO activity_interest_normalize (user_sys_id, activity_type_id, flag_valid) \n
+      VALUES ${activityTypeInsertValues} \n
       RETURNING *;
     `;
 
