@@ -72,51 +72,104 @@ export const getActivity = async (req: Request, res: Response) => {
     if (location_type) {
         query += `AND l.location_type = ${location_type}  \n`
     }
-    if (flag_valid) {
+    if (typeof flag_valid === 'boolean') {
         query += `AND a.flag_valid = ${flag_valid}`
     }
 
     console.log(query)
 
+    // const data = await queryPostgresDB(query, globalSmartGISConfig);
+    // const activityID = data[0]['activity_id']
+
+    // let queryAcNor = ``
+
+    // queryAcNor += `
+    //     SELECT * FROM public.activity_type_normalize atn
+    //     LEFT JOIN activity_type at ON at.activity_type_id = atn.activity_type_id
+    //     WHERE atn.activity_id = ${activityID}
+    // `
+
+    // const acActypeNordata = await queryPostgresDB(queryAcNor, globalSmartGISConfig);
+
+    // let querySubNor = ``
+
+    // querySubNor += `
+    //     SELECT * FROM public.activity_subject_normalize asn
+    //     LEFT JOIN subject s ON s.subject_id = asn.subject_id
+    //     WHERE asn.activity_id = ${activityID}
+    // `
+
+    // const acSubNordata = await queryPostgresDB(querySubNor, globalSmartGISConfig);
+
+    // // จัดกลุ่มข้อมูล normalize โดย activity_id
+    // const acTypeGrouped : any = {};
+    // for (const row of acActypeNordata) {
+    //     const id = row.activity_id;
+    //     if (!acTypeGrouped[id]) acTypeGrouped[id] = [];
+    //     acTypeGrouped[id].push(row);
+    // }
+
+    // const subTypeGrouped : any = {};
+    // for (const row of acSubNordata) {
+    //     const id = row.activity_id;
+    //     if (!subTypeGrouped[id]) subTypeGrouped[id] = [];
+    //     subTypeGrouped[id].push(row);
+    // }
+
+    // // ใส่ข้อมูล normalize ลงในแต่ละ activity
+    // const enrichedData = data.map(activity => {
+    //     const id = activity.activity_id;
+    //     return {
+    //         ...activity,
+    //         activity_type_data: acTypeGrouped[id] || [],
+    //         activity_subject_data: subTypeGrouped[id] || []
+    //     };
+    // });
+
     const data = await queryPostgresDB(query, globalSmartGISConfig);
-    const activityID = data[0]['activity_id']
+    const activityIDs = data.map((item: any) => item.activity_id);
 
-    let queryAcNor = ``
+    if (activityIDs.length === 0) {
+        res.status(404).json({ success: false, message: 'Activity Not Found!' });
+        return;
+    }
 
-    queryAcNor += `
+    // สร้าง IN (...) clause
+    const idsList = activityIDs.map(id => `'${id}'`).join(',');
+
+    // Query ข้อมูล normalize แบบหลาย activity
+    const queryAcNor = `
         SELECT * FROM public.activity_type_normalize atn
         LEFT JOIN activity_type at ON at.activity_type_id = atn.activity_type_id
-        WHERE atn.activity_id = ${activityID}
-    `
+        WHERE atn.activity_id IN (${idsList})
+    `;
 
     const acActypeNordata = await queryPostgresDB(queryAcNor, globalSmartGISConfig);
 
-    let querySubNor = ``
-
-    querySubNor += `
+    const querySubNor = `
         SELECT * FROM public.activity_subject_normalize asn
         LEFT JOIN subject s ON s.subject_id = asn.subject_id
-        WHERE asn.activity_id = ${activityID}
-    `
+        WHERE asn.activity_id IN (${idsList})
+    `;
 
     const acSubNordata = await queryPostgresDB(querySubNor, globalSmartGISConfig);
 
-    // จัดกลุ่มข้อมูล normalize โดย activity_id
-    const acTypeGrouped : any = {};
+    // จัดกลุ่ม normalize ข้อมูลตาม activity_id
+    const acTypeGrouped: Record<string, any[]> = {};
     for (const row of acActypeNordata) {
         const id = row.activity_id;
         if (!acTypeGrouped[id]) acTypeGrouped[id] = [];
         acTypeGrouped[id].push(row);
     }
 
-    const subTypeGrouped : any = {};
+    const subTypeGrouped: Record<string, any[]> = {};
     for (const row of acSubNordata) {
         const id = row.activity_id;
         if (!subTypeGrouped[id]) subTypeGrouped[id] = [];
         subTypeGrouped[id].push(row);
     }
 
-    // ใส่ข้อมูล normalize ลงในแต่ละ activity
+    // รวมข้อมูล normalize เข้ากับแต่ละ activity
     const enrichedData = data.map(activity => {
         const id = activity.activity_id;
         return {
@@ -128,7 +181,7 @@ export const getActivity = async (req: Request, res: Response) => {
 
 
     try {
-        res.status(200).json({ success: true, data : enrichedData });
+        res.status(200).json({ success: true, data: enrichedData });
     } catch (error) {
         console.error('Error fetching data:', error);
         res.status(500).json({ success: false, message: 'Error fetching data' });
@@ -154,7 +207,7 @@ export const createActivity = async (req: Request, res: Response) => {
         location_id,
         activity_type,
         subject,
-        activity_json_form, 
+        activity_json_form,
         image_link,
     } = req.body;
 
@@ -354,7 +407,7 @@ export const deleteActivity = async (req: Request, res: Response) => {
 
     if (!activity_id) {
         res.status(400).json({ success: false, message: 'Missing activity_id' });
-        return 
+        return
     }
 
     const query = `
@@ -449,7 +502,7 @@ export const getMyActivity = async (req: Request, res: Response) => {
     if (flag_valid) {
         query += `AND a.flag_valid = ${flag_valid}  \n`
     }
-    if (user_sys_id){
+    if (user_sys_id) {
         query += `AND atd.user_sys_id = ${user_sys_id}`
     }
 
@@ -505,7 +558,7 @@ export const joinActivity = async (req: Request, res: Response) => {
     `;
 
     console.log("query", query)
-    
+
     try {
         const data = await queryPostgresDB(query, globalSmartGISConfig);
         res.status(200).json({ success: true, data });
