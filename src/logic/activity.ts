@@ -78,54 +78,6 @@ export const getActivity = async (req: Request, res: Response) => {
 
     console.log(query)
 
-    // const data = await queryPostgresDB(query, globalSmartGISConfig);
-    // const activityID = data[0]['activity_id']
-
-    // let queryAcNor = ``
-
-    // queryAcNor += `
-    //     SELECT * FROM public.activity_type_normalize atn
-    //     LEFT JOIN activity_type at ON at.activity_type_id = atn.activity_type_id
-    //     WHERE atn.activity_id = ${activityID}
-    // `
-
-    // const acActypeNordata = await queryPostgresDB(queryAcNor, globalSmartGISConfig);
-
-    // let querySubNor = ``
-
-    // querySubNor += `
-    //     SELECT * FROM public.activity_subject_normalize asn
-    //     LEFT JOIN subject s ON s.subject_id = asn.subject_id
-    //     WHERE asn.activity_id = ${activityID}
-    // `
-
-    // const acSubNordata = await queryPostgresDB(querySubNor, globalSmartGISConfig);
-
-    // // จัดกลุ่มข้อมูล normalize โดย activity_id
-    // const acTypeGrouped : any = {};
-    // for (const row of acActypeNordata) {
-    //     const id = row.activity_id;
-    //     if (!acTypeGrouped[id]) acTypeGrouped[id] = [];
-    //     acTypeGrouped[id].push(row);
-    // }
-
-    // const subTypeGrouped : any = {};
-    // for (const row of acSubNordata) {
-    //     const id = row.activity_id;
-    //     if (!subTypeGrouped[id]) subTypeGrouped[id] = [];
-    //     subTypeGrouped[id].push(row);
-    // }
-
-    // // ใส่ข้อมูล normalize ลงในแต่ละ activity
-    // const enrichedData = data.map(activity => {
-    //     const id = activity.activity_id;
-    //     return {
-    //         ...activity,
-    //         activity_type_data: acTypeGrouped[id] || [],
-    //         activity_subject_data: subTypeGrouped[id] || []
-    //     };
-    // });
-
     const data = await queryPostgresDB(query, globalSmartGISConfig);
     const activityIDs = data.map((item: any) => item.activity_id);
 
@@ -460,6 +412,7 @@ export const getMyActivity = async (req: Request, res: Response) => {
     ) {
         res.status(404).json({ success: false, message: 'No value input!' });
         // throw new Error("No value input!");
+        return
     }
 
     let query = ``;
@@ -517,6 +470,176 @@ export const getMyActivity = async (req: Request, res: Response) => {
         res.status(500).json({ success: false, message: 'Error fetching data' });
     }
 };
+
+// export const getActivityWithAttendance = async (req: Request, res: Response) => {
+//     const {
+//         activity_id,
+//         create_date,
+//         start_date,
+//         end_date,
+//         status,
+//         create_by,
+//         location_id,
+//         flag_valid
+//     } = req.body;
+
+//     if (
+//         !activity_id &&
+//         !create_date &&
+//         !start_date &&
+//         !end_date &&
+//         !status &&
+//         !create_by &&
+//         !location_id &&
+//         !flag_valid
+//     ) {
+//         res.status(404).json({ success: false, message: 'No value input!' });
+//         return
+//     }
+
+//     let query = ``;
+
+//     query += `
+//         SELECT * FROM activity a 
+//         LEFT JOIN attendance atd ON a.activity_id = atd.activity_id 
+//         WHERE a.activity_id > 0 \n
+//     `
+
+//     if (activity_id) {
+//         query += `AND a.activity_id = ${activity_id} \n`;
+//     }
+//     if (create_date) {
+//         query += `AND a.create_date = '${create_date}' \n`;
+//     }
+//     if (start_date) {
+//         query += `AND a.start_date = '${start_date}' \n`;
+//     }
+//     if (end_date) {
+//         query += `AND a.end_date = '${end_date}' \n`;
+//     }
+//     if (status) {
+//         query += `AND a.status = '${status}' \n`;
+//     }
+//     if (create_by) {
+//         query += `AND a.create_by = '${create_by}' \n`;
+//     }
+//     if (location_id) {
+//         query += `AND a.location_id = ${location_id} \n`;
+//     }
+//     if (typeof flag_valid === 'boolean') {
+//         query += `AND a.flag_valid = ${flag_valid} \n`;
+//     }
+
+//     console.log('Generated SQL:', query);
+
+//     try {
+//         const data = await queryPostgresDB(query, globalSmartGISConfig);
+
+//         if (data.length === 0) {
+//             res.status(404).json({ success: false, message: 'No matching data found!' });
+//             return
+//         }
+
+//         res.status(200).json({ success: true, data });
+//     } catch (error) {
+//         //console.error('Error fetching data:', error);
+//         res.status(500).json({ success: false, message: 'Error fetching data' });
+//     }
+// };
+
+export const getActivityWithAttendance = async (req: Request, res: Response) => {
+    const {
+        activity_id,
+        create_date,
+        start_date,
+        end_date,
+        status,
+        create_by,
+        location_id,
+        flag_valid,
+        approve,
+    } = req.body;
+
+    if (
+        !activity_id &&
+        !create_date &&
+        !start_date &&
+        !end_date &&
+        !status &&
+        !create_by &&
+        !location_id &&
+        typeof approve !== 'boolean' &&
+        typeof flag_valid !== 'boolean'
+    ) {
+        res.status(404).json({ success: false, message: 'No value input!' });
+        return;
+    }
+
+    let query = `
+        SELECT * FROM activity a 
+        WHERE a.activity_id > 0 
+    `;
+
+    if (activity_id) query += `AND a.activity_id = ${activity_id} \n`;
+    if (create_date) query += `AND a.create_date = '${create_date}' \n`;
+    if (start_date) query += `AND a.start_date = '${start_date}' \n`;
+    if (end_date) query += `AND a.end_date = '${end_date}' \n`;
+    if (status) query += `AND a.status = '${status}' \n`;
+    if (create_by) query += `AND a.create_by = '${create_by}' \n`;
+    if (location_id) query += `AND a.location_id = ${location_id} \n`;
+    if (typeof flag_valid === 'boolean') query += `AND a.flag_valid = ${flag_valid} \n`;
+
+    try {
+        const data = await queryPostgresDB(query, globalSmartGISConfig);
+        const activityIDs = data.map((item: any) => item.activity_id);
+
+        if (activityIDs.length === 0) {
+            res.status(404).json({ success: false, message: 'Activity Not Found!' });
+            return;
+        }
+
+        const idsList = activityIDs.map(id => `'${id}'`).join(',');
+
+        // ดึงข้อมูล attendance ที่เกี่ยวข้อง
+        let queryAttendance = `
+            SELECT * FROM public.attendance atd \n
+            LEFT JOIN user_sys us ON us.user_sys_id = atd.user_sys_id \n
+            WHERE atd.activity_id IN (${activityIDs}) \n
+        `;
+        console.log("typeof approve", typeof approve)
+        
+        if (typeof approve == 'boolean') {
+            queryAttendance += `AND atd.approve = ${approve} \n`
+        };
+
+        console.log("queryAttendance", queryAttendance)
+
+        const attendanceData = await queryPostgresDB(queryAttendance, globalSmartGISConfig);
+
+        // จัดกลุ่ม attendance ตาม activity_id
+        const attendanceGrouped: Record<string, any[]> = {};
+        for (const row of attendanceData) {
+            const id = row.activity_id;
+            if (!attendanceGrouped[id]) attendanceGrouped[id] = [];
+            attendanceGrouped[id].push(row);
+        }
+
+        // ผูกข้อมูล attendance เข้ากับแต่ละ activity
+        const enrichedData = data.map(activity => {
+            const id = activity.activity_id;
+            return {
+                ...activity,
+                attendance_data: attendanceGrouped[id] || []
+            };
+        });
+
+        res.status(200).json({ success: true, data: enrichedData });
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        res.status(500).json({ success: false, message: 'Error fetching data' });
+    }
+};
+
 
 export const joinActivity = async (req: Request, res: Response) => {
     const {
