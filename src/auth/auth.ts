@@ -23,7 +23,7 @@ const verifyPasswordWithSalt = async (plainPassword: string, hashedPassword: str
 const checkEmailAlreadyUse = async (email : string) => {
   
   const query = `
-    select * from user_sys
+    select * from user_sys \n
     where email = '${email}'
   `
 
@@ -60,10 +60,14 @@ export const registerUser = async (req: Request, res: Response) => {
 
     const passwordHasing = await hashPasswordWithSalt(password);
     const username = email.split('@')[0];
+  // เอา email ไปทำ OTP
+
+
+  // OTP section ถ้าผ่านทำต่อ ถ้าไม่ผ่าน return error
 
     const query = `
-      INSERT INTO user_sys (username, email, user_first_name, user_last_name, password, sex, role_id)
-      VALUES ('${username}', '${email}', '${user_first_name}', '${user_last_name}', '${passwordHasing}', '${sex}', ${role_id})
+    INSERT INTO user_sys (username, email, user_first_name, user_last_name, password, sex, role_id, org_id)
+    VALUES ('${username}', '${email}', '${user_first_name}', '${user_last_name}', '${passwordHasing}', '${sex}' , ${role_id}, ${org_id})
       RETURNING *;
     `;
 
