@@ -11,6 +11,7 @@ import { getSubject, createSubject, updateSubject } from "../logic/subject"
 import { getClub, uploadimageclub, createClub, updateClub, uploadPRImagesClub } from "../logic/club";
 import { uploadMedia } from '../logic/image';
 import {getImageClub} from '../logic/clubimage'
+import { createImageProfile } from '../logic/genImageProfile'
 import multer from 'multer';
 
 const storage = multer.memoryStorage();
@@ -90,6 +91,8 @@ router.post("/clublink.get", getImageClub)
 //image
 
 router.put('/image.upload', upload.single('file'), uploadMedia);
+
+router.post('/profile.gen', createImageProfile)
 
 //otp
 // router.post("/otp.send", sendOTP)

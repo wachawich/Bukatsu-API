@@ -18,10 +18,24 @@ const verifyPasswordWithSalt = async (plainPassword: string, hashedPassword: str
   return isMatch;
 };
 
+function generateDefaultAvatar(letter: any) {
+  const svg = `
+  <svg width="128" height="128" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#4F46E5"/>
+    <text x="50%" y="50%" font-size="64" fill="white" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif">
+      ${letter}
+    </text>
+  </svg>
+  `;
+  const base64 = Buffer.from(svg).toString("base64");
+  return `data:image/svg+xml;base64,${base64}`;
+}
+
+
 // const users: { id: number; username: string; password: string }[] = [];
 
-const checkEmailAlreadyUse = async (email : string) => {
-  
+const checkEmailAlreadyUse = async (email: string) => {
+
   const query = `
     select * from user_sys \n
     where email = '${email}'
@@ -53,17 +67,21 @@ export const registerUser = async (req: Request, res: Response) => {
 
     const emailIsUse = await checkEmailAlreadyUse(email);
 
-    if (emailIsUse){
+    if (emailIsUse) {
       res.status(500).json({ success: false, message: "Email Already Used!" });
       return
     }
 
+
     const passwordHasing = await hashPasswordWithSalt(password);
     const username = email.split('@')[0];
 
+    const firstChar = username.trim().charAt(0).toUpperCase();
+    const profileImage = generateDefaultAvatar(firstChar);
+
     const query = `
-      INSERT INTO user_sys (username, email, user_first_name, user_last_name, password, sex, role_id) \n
-      VALUES ('${username}', '${email}', '${user_first_name}', '${user_last_name}', '${passwordHasing}', '${sex}', ${role_id}) \n
+      INSERT INTO user_sys (username, email, user_first_name, user_last_name, password, sex, role_id, profile_image) \n
+      VALUES ('${username}', '${email}', '${user_first_name}', '${user_last_name}', '${passwordHasing}', '${sex}', ${role_id}, '${profileImage}') \n
       RETURNING *;
     `;
 
@@ -117,7 +135,7 @@ export const registerUser = async (req: Request, res: Response) => {
 export const loginUser = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
-    const JWT_SECRET : any = process.env.JWT_SECRET
+    const JWT_SECRET: any = process.env.JWT_SECRET
 
     // 1. Find user by username or email
     const userQuery = `
@@ -139,7 +157,7 @@ export const loginUser = async (req: Request, res: Response) => {
     const user = usersData[0];
 
     // 2. Verify password with salt
-    const isMatch = await verifyPasswordWithSalt(password , user.password)
+    const isMatch = await verifyPasswordWithSalt(password, user.password)
 
     if (!isMatch) {
       res.status(401).json({ success: false, message: "Incorrect password" });
@@ -211,7 +229,7 @@ export const changePassword = async (req: Request, res: Response) => {
     const { user_sys_id, old_password, new_password } = req.body;
 
     if (!user_sys_id || !old_password || !new_password) {
-      res.status(400).json({ success: false, message: "Email and new password are required" });
+      res.status(400).json({ success: false, message: "Userid and new password are required" });
       return
     }
 
@@ -220,7 +238,7 @@ export const changePassword = async (req: Request, res: Response) => {
       WHERE user_sys_id = ${user_sys_id}
     `
 
-    const userData = await  queryPostgresDB(query, globalSmartGISConfig);
+    const userData = await queryPostgresDB(query, globalSmartGISConfig);
     if (userData.length <= 0) {
       res.status(404).json({ success: false, message: "User not found" });
       return
@@ -228,9 +246,9 @@ export const changePassword = async (req: Request, res: Response) => {
 
     const passwordUserData = userData[0]['password']
 
-    const isMatch = await verifyPasswordWithSalt(old_password , passwordUserData)
+    const isMatch = await verifyPasswordWithSalt(old_password, passwordUserData)
 
-    if (isMatch){
+    if (isMatch) {
       const passwordHasing = await hashPasswordWithSalt(new_password)
 
       const updateQuery = `

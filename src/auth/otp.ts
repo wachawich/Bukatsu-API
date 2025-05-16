@@ -30,7 +30,7 @@ export const sendOTP = async (req: Request, res: Response) => {
   
     try {
       const otpData = await OTPFunction(email, otp);
-      console.log("otp", otp);
+      console.log("otp", otp, otpData);
       res.status(200).json({ success: true, message: "OTP sent to email" });
       return
     } catch (err) {
