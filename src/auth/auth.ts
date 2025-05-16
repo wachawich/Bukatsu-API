@@ -21,7 +21,7 @@ const verifyPasswordWithSalt = async (plainPassword: string, hashedPassword: str
 // const users: { id: number; username: string; password: string }[] = [];
 
 const checkEmailAlreadyUse = async (email : string) => {
-  
+
   const query = `
     select * from user_sys \n
     where email = '${email}'
@@ -65,11 +65,11 @@ export const registerUser = async (req: Request, res: Response) => {
 
   // OTP section ถ้าผ่านทำต่อ ถ้าไม่ผ่าน return error
 
-    const query = `
+  const query = `
     INSERT INTO user_sys (username, email, user_first_name, user_last_name, password, sex, role_id, org_id)
     VALUES ('${username}', '${email}', '${user_first_name}', '${user_last_name}', '${passwordHasing}', '${sex}' , ${role_id}, ${org_id})
-      RETURNING *;
-    `;
+    RETURNING *;
+  `;
 
     const userData = await queryPostgresDB(query, globalSmartGISConfig);
     const userSysID = userData[0]?.user_sys_id;
