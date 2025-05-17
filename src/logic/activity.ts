@@ -354,29 +354,52 @@ export const updateActivity = async (req: Request, res: Response) => {
 };
 
 
+import { Pool } from 'pg';
+
+// สมมติ pool สร้างไว้แล้ว หรือ import มาจากไฟล์ config ของคุณ
+const pool = new Pool({
+    host: process.env.PG_HOST,
+    port: Number(process.env.PG_PORT),
+    database: process.env.PG_DATABASE,
+    user: process.env.PG_USER,
+    password: process.env.PG_PASSWORD,
+    ssl: { rejectUnauthorized: false },
+});
+
 export const deleteActivity = async (req: Request, res: Response) => {
-    const { activity_id } = req.params;
+    const { activity_id } = req.body;
 
     if (!activity_id) {
         res.status(400).json({ success: false, message: 'Missing activity_id' });
         return
     }
 
-    const query = `
-        UPDATE activity
-        SET flag_valid = false
-        WHERE activity_id = ${activity_id}
-        RETURNING *;
-    `;
+    const client = await pool.connect();
 
     try {
-        const deletedActivity = await queryPostgresDB(query, globalSmartGISConfig);
-        res.status(200).json({ success: true, deletedActivity });
+        await client.query('BEGIN');
+
+        await client.query('DELETE FROM favorite_normalize WHERE activity_id = $1', [activity_id]);
+        await client.query('DELETE FROM attendance WHERE activity_id = $1', [activity_id]);
+        await client.query('DELETE FROM activity_type_normalize WHERE activity_id = $1', [activity_id]);
+        await client.query('DELETE FROM activity_subject_normalize WHERE activity_id = $1', [activity_id]);
+
+        const { rows } = await client.query('DELETE FROM activity WHERE activity_id = $1 RETURNING *', [activity_id]);
+
+        await client.query('COMMIT');
+
+        res.status(200).json({ success: true, deletedActivity: rows[0] });
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error deleting activity:', error);
         res.status(500).json({ success: false, message: 'Error deleting activity' });
+    } finally {
+        client.release();
     }
 };
+
+
+
 
 
 export const getMyActivity = async (req: Request, res: Response) => {
