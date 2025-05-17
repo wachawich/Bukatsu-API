@@ -201,7 +201,7 @@ export const createActivity = async (req: Request, res: Response) => {
     const finalCreateDate = create_date || new Date().toISOString();
 
     const activityJsonEscaped = activity_json_form
-        ? `'${JSON.stringify(activity_json_form).replace(/'/g, "''")}'`
+        ? `${JSON.stringify(activity_json_form).replace(/'/g, "''")}`
         : 'NULL';
 
     const iamgeLinkJsonEscaped = image_link
