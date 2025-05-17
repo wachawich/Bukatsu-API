@@ -187,7 +187,7 @@ export const createActivity = async (req: Request, res: Response) => {
         return
     }
 
-    if (!title || !create_by || !start_date || !end_date || !status || !location_id || !user_count || !activity_type || !subject) {
+    if (!title || !create_by || !start_date || !end_date || !location_id || !user_count || !activity_type || !subject) {
         //throw new Error("No value input require feild!");
         res.status(404).json({ success: false, message: 'No value input require feild!' });
         return
@@ -222,7 +222,7 @@ export const createActivity = async (req: Request, res: Response) => {
         '${finalCreateDate}', 
         '${start_date}',
         '${end_date}',
-        '${status}',
+        'ACTIVE',
         ${contact ? `'${contact}'` : 'NULL'},
         '${user_count}',
         ${price ?? 'NULL'},
