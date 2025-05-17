@@ -231,11 +231,13 @@ export const createActivity = async (req: Request, res: Response) => {
         ${create_by},
         ${location_id},
         true,
-        ${iamgeLinkJsonEscaped}::jsonb,
-        ${activityJsonEscaped}::jsonb
+        ${iamgeLinkJsonEscaped}::jsonb ,
+        '${activityJsonEscaped}'::jsonb
     )
     RETURNING *;
     `;
+
+    console.log("query", query)
 
     try {
         const activityData = await queryPostgresDB(query, globalSmartGISConfig);
