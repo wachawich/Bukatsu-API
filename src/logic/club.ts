@@ -184,13 +184,16 @@ export const createClub = async (req: Request, res: Response) => {
     const {
       club_name,
       club_description,
-      club_timestamp,
       club_link,
       club_image_path, // JSON object: { square: "", banner: "" }
     } = req.body;
   
     const jsonPath = JSON.stringify(club_image_path);
-  
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0'); 
+    const dd = String(now.getDate()).padStart(2, '0');
+    const club_timestamp = `${yyyy}-${mm}-${dd}`;
     const query = `
       INSERT INTO club (
         club_name,
