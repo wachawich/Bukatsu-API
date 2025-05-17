@@ -231,7 +231,7 @@ export const createActivity = async (req: Request, res: Response) => {
         ${create_by},
         ${location_id},
         true,
-        ${iamgeLinkJsonEscaped}::jsonb
+        ${iamgeLinkJsonEscaped}::jsonb,
         ${activityJsonEscaped}::jsonb
     )
     RETURNING *;
